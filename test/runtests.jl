@@ -14,6 +14,7 @@ include("traits.jl")
 include("map.jl")
 include("functions.jl")
 include("show.jl")
+include("deprecations.jl")
 
 # run these last
 isCI = haskey(ENV, "CI") || get(ENV, "JULIA_PKGEVAL", false)

@@ -22,3 +22,6 @@ end
 ColorView(parent::AbstractArray) = error("must specify the colortype, use colorview(C, A)")
 
 Base.@deprecate_binding squeeze1 true
+
+# "permanent" deprecation
+Base.@deprecate_binding permuteddimsview PermutedDimsArray

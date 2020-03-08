@@ -27,11 +27,11 @@ end
     @test summary(c) == "3×3×5 rawview(reinterpret(N0f8, ::Array{RGB{N0f8},3})) with eltype UInt8"
     @test summary(rgb8) == "3×5 Array{RGB{N0f8},2} with eltype $(prefixC)RGB{$(prefixF)Normed{UInt8,8}}"
     rand8 = rand(UInt8, 3, 5)
-    d = normedview(permuteddimsview(rand8, (2,1)))
+    d = normedview(PermutedDimsArray(rand8, (2,1)))
     @test summary(d) == "5×3 normedview(N0f8, PermutedDimsArray(::Array{UInt8,2}, (2, 1))) with eltype $(prefixF)Normed{UInt8,8}"
-    e = permuteddimsview(normedview(rand8), (2,1))
+    e = PermutedDimsArray(normedview(rand8), (2,1))
     @test summary(e) == "5×3 PermutedDimsArray(reinterpret(N0f8, ::Array{UInt8,2}), (2, 1)) with eltype $(prefixF)Normed{UInt8,8}"
-    f = permuteddimsview(normedview(N0f16, rand(UInt16, 3, 5)), (2,1))
+    f = PermutedDimsArray(normedview(N0f16, rand(UInt16, 3, 5)), (2,1))
     @test summary(f) == "5×3 PermutedDimsArray(reinterpret(N0f16, ::Array{UInt16,2}), (2, 1)) with eltype $(prefixF)Normed{UInt16,16}"
     g = channelview(rgb8)
     @test summary(g) == "3×3×5 reinterpret(N0f8, ::Array{RGB{N0f8},3})"
