@@ -50,86 +50,6 @@ end
 end
 
 """
-    pixelspacing(img) -> (sx, sy, ...)
-
-Return a tuple representing the separation between adjacent pixels
-along each axis of the image.  Defaults to (1,1,...).  Use
-ImagesAxes for images with anisotropic spacing or to encode the
-spacing using physical units.
-"""
-pixelspacing(img::AbstractArray{T,N}) where {T,N} = ntuple(d->1, Val(N))
-# Some of these traits need to work recursively into "container" types
-pixelspacing(img::AbstractMappedArray) = pixelspacing(parent(img))
-function pixelspacing(img::AbstractMultiMappedArray)
-    ps = traititer(pixelspacing, parent(img)...)
-    checksame(ps)
-end
-pixelspacing(img::OffsetArray) = pixelspacing(parent(img))
-@inline pixelspacing(img::SubArray) =
-    _subarray_filter(pixelspacing(parent(img)), img.indices...)
-@inline pixelspacing(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(pixelspacing(parent(img)), perm)
-
-"""
-    spacedirections(img) -> (axis1, axis2, ...)
-
-Return a tuple-of-tuples, each `axis[i]` representing the displacement
-vector between adjacent pixels along spatial axis `i` of the image
-array, relative to some external coordinate system ("physical
-coordinates").
-
-By default this is computed from `pixelspacing`, but you can set this
-manually using ImagesMeta.
-"""
-spacedirections(img::AbstractArray) = _spacedirections(pixelspacing(img))
-spacedirections(img::AbstractMappedArray) = spacedirections(parent(img))
-function spacedirections(img::AbstractMultiMappedArray)
-    ps = traititer(spacedirections, parent(img)...)
-    checksame(ps)
-end
-spacedirections(img::OffsetArray) = spacedirections(parent(img))
-@inline spacedirections(img::SubArray) =
-    _subarray_filter(spacedirections(parent(img)), img.indices...)
-@inline spacedirections(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(spacedirections(parent(img)), perm)
-
-function _spacedirections(ps::NTuple{N,Any}) where N
-    ntuple(i->ntuple(d->d==i ? ps[d] : zero(ps[d]), Val(N)), Val(N))
-end
-
-"""
-    sdims(img)
-
-Return the number of spatial dimensions in the image. Defaults to the
-same as `ndims`, but with ImagesAxes you can specify that some axes
-correspond to other quantities (e.g., time) and thus not included by
-`sdims`.
-"""
-sdims(img::AbstractArray) = length(coords_spatial(img))
-
-"""
-   coords_spatial(img)
-
-Return a tuple listing the spatial dimensions of `img`.
-
-Note that a better strategy may be to use ImagesAxes and take slices along the time axis.
-"""
-@inline coords_spatial(img::AbstractArray{T,N}) where {T,N} = ntuple(identity, Val(N))
-
-coords_spatial(img::AbstractMappedArray) = coords_spatial(parent(img))
-function coords_spatial(img::AbstractMultiMappedArray)
-    ps = traititer(coords_spatial, parent(img)...)
-    checksame(ps)
-end
-coords_spatial(img::OffsetArray) = coords_spatial(parent(img))
-@inline coords_spatial(img::SubArray) =
-    _subarray_offset(0, coords_spatial(parent(img)), img.indices...)
-@inline coords_spatial(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm,iperm}) where {T,N,perm,iperm} =
-    _getindex_tuple(coords_spatial(parent(img)), iperm)
-
-
-
-"""
     nimages(img)
 
 Return the number of time-points in the image array. Defaults to
@@ -144,43 +64,6 @@ end
 nimages(img::OffsetArray) = nimages(parent(img))
 nimages(img::SubArray) = nimages(parent(img))
 nimages(img::Base.PermutedDimsArrays.PermutedDimsArray) = nimages(parent(img))
-
-"""
-    size_spatial(img)
-
-Return a tuple listing the sizes of the spatial dimensions of the
-image. Defaults to the same as `size`, but using ImagesAxes you can
-mark some axes as being non-spatial.
-"""
-size_spatial(img) = size(img)
-size_spatial(img::AbstractMappedArray) = size_spatial(parent(img))
-function size_spatial(img::AbstractMultiMappedArray)
-    ps = traititer(size_spatial, parent(img)...)
-    checksame(ps)
-end
-size_spatial(img::OffsetArray) = size_spatial(parent(img))
-@inline size_spatial(img::SubArray) =
-    _subarray_filter(size_spatial(parent(img)), img.indices...)
-@inline size_spatial(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(size_spatial(parent(img)), perm)
-
-"""
-    indices_spatial(img)
-
-Return a tuple with the indices of the spatial dimensions of the
-image. Defaults to the same as `indices`, but using ImagesAxes you can
-mark some axes as being non-spatial.
-"""
-indices_spatial(img) = axes(img)
-indices_spatial(img::AbstractMappedArray) = indices_spatial(parent(img))
-function indices_spatial(img::AbstractMultiMappedArray)
-    ps = traititer(indices_spatial, parent(img)...)
-    checksame(ps)
-end
-@inline indices_spatial(img::SubArray) =
-    _subarray_filter(indices_spatial(parent(img)), img.indices...)
-@inline indices_spatial(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(indices_spatial(parent(img)), perm)
 
 #### Utilities for writing "simple algorithms" safely ####
 # If you don't feel like supporting multiple representations, call these
@@ -204,18 +87,6 @@ widthheight(img::AbstractArray) = length(axes(img,2)), length(axes(img,1))
 
 width(img::AbstractArray) = widthheight(img)[1]
 height(img::AbstractArray) = widthheight(img)[2]
-
-
-# Traits whose only meaningful definitions occur in ImageAxes, but for
-# which we want nesting behavior
-spatialorder(img::AbstractMappedArray) = spatialorder(parent(img))
-function spatialorder(img::AbstractMultiMappedArray)
-    ps = traititer(spatialorder, parent(img)...)
-    checksame(ps)
-end
-spatialorder(img::OffsetArray) = spatialorder(parent(img))
-@inline spatialorder(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(spatialorder(parent(img)), perm)
 
 # Utilities
 
@@ -244,3 +115,150 @@ _subarray_offset(off, x::Tuple{}) = ()
 @inline _getindex_tuple(t::Tuple, inds::Tuple) =
     (t[inds[1]], _getindex_tuple(t, tail(inds))...)
 _getindex_tuple(t::Tuple, ::Tuple{}) = ()
+
+
+### Start new traits
+
+Base.@pure is_color(x::Symbol) = x === :color
+
+AxisIndices.@defdim color is_color
+
+# yes, I'm abusing @pure
+Base.@pure function is_spatial(x::Symbol)
+    return !is_time(x) && !is_color(x) && !is_observation(x)
+end
+
+"""
+    spatial_order(x) -> Tuple{Vararg{Symbol}}
+
+Returns the `dimnames` of `x` that correspond to spatial dimensions.
+"""
+spatial_order(x::X) where {X} = _spatial_order(Val(dimnames(X)))
+@generated function _spatial_order(::Val{L}) where {L}
+    keep_names = []
+    for n in L
+        if is_spatial(n)
+            push!(keep_names, n)
+        end
+    end
+    out = (keep_names...,)
+    quote
+        return $out
+    end
+end
+
+"""
+    spatialdims(x) -> Tuple{Vararg{Int}}
+
+Return a tuple listing the spatial dimensions of `img`.
+Note that a better strategy may be to use ImagesAxes and take slices along the time axis.
+"""
+@inline spatialdims(x) = dim(dimnames(x), spatial_order(x))
+
+"""
+    spatial_axes(x) -> Tuple
+
+Returns a tuple of each axis corresponding to a spatial dimensions.
+"""
+@inline spatial_axes(x) = _spatial_axes(named_axes(x), spatial_order(x))
+function _spatial_axes(na::NamedTuple, spo::Tuple{Vararg{Symbol}})
+    return map(spo_i -> getfield(na, spo_i), spo)
+end
+
+"""
+    spatial_size(img) -> Tuple{Vararg{Int}}
+
+Return a tuple listing the sizes of the spatial dimensions of the
+image. Defaults to the same as `size`, but using AxisIndices you can
+mark some axes as being non-spatial.
+"""
+@inline spatial_size(x) = map(length, spatial_axes(x))
+
+"""
+    spatial_indices(x)
+
+Return a tuple with the indices of the spatial dimensions of the
+image. Defaults to the same as `indices`, but using `NamedDimsArray` you can
+mark some axes as being non-spatial.
+"""
+@inline spatial_indices(x) = map(values, spatial_axes(x))
+
+# TODO document this
+"""
+    spatial_keys(x)
+"""
+@inline spatial_keys(x) = map(keys, spatial_axes(x))
+
+# FIXME account for keys with no steps
+"""
+    pixel_spacing(x)
+
+Return a tuple representing the separation between adjacent pixels along each axis
+of the image. Derived from the step size of each element of `spatial_keys`.
+"""
+@inline function pixel_spacing(x)
+    map(spatial_keys(x)) do ks_i
+        if StaticRanges.has_step(ks_i)
+            return step(ks_i)
+        else
+            return 0
+        end
+    end
+end
+
+"""
+    spatial_offset(x)
+
+The offset of each dimension (i.e., where each spatial axis starts).
+"""
+spatial_offset(x) = map(first, spatial_keys(x))
+
+"""
+    spatial_directions(x) -> (axis1, axis2, ...)
+
+Return a tuple-of-tuples, each `axis[i]` representing the displacement
+vector between adjacent pixels along spatial axis `i` of the image
+array, relative to some external coordinate system ("physical
+coordinates").
+
+By default this is computed from `pixel_spacing`, but you can set this
+manually using ImagesMeta.
+"""
+function spatial_directions(x::AbstractArray{T,N}) where {T,N}
+    ntuple(Val(N)) do i
+        ntuple(Val(N)) do d
+            if d === i
+                if is_spatial(dimnames(x, i))
+                    ks = axes_keys(x, i)
+                    if StaticRanges.has_step(ks)
+                        return step(ks)
+                    else
+                        return 1  # TODO If keys are not range does it make sense to return this?
+                    end
+                else
+                    return 0
+                end
+            else
+                return 0
+            end
+        end
+    end
+end
+
+"""
+    sdims(x)
+
+Return the number of spatial dimensions in the image. Defaults to the same as
+`ndims`, but with `NamedDimsArray` you can specify that some dimensions
+correspond to other quantities (e.g., time) and thus not included by `sdims`.
+"""
+@inline function sdims(x)
+    cnt = 0
+    for name in dimnames(x)
+        if is_spatial(name)
+            cnt += 1
+        end
+    end
+    return cnt
+end
+
