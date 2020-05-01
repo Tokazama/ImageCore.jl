@@ -52,37 +52,13 @@ end
 """
     nimages(img)
 
-Return the number of time-points in the image array. Defaults to
-1. Use ImagesAxes if you want to use an explicit time dimension.
+Return the number of time-points in the image array. Use `NamedDims` if you want
+to use an explicit time dimension.
 """
-nimages(img::AbstractArray) = 1
-nimages(img::AbstractMappedArray) = nimages(parent(img))
-function nimages(img::AbstractMultiMappedArray)
-    ps = traititer(nimages, parent(img)...)
-    checksame(ps)
-end
-nimages(img::OffsetArray) = nimages(parent(img))
-nimages(img::SubArray) = nimages(parent(img))
-nimages(img::Base.PermutedDimsArrays.PermutedDimsArray) = nimages(parent(img))
+nimages(img::AbstractArray) = ntime(img)
 
 #### Utilities for writing "simple algorithms" safely ####
 # If you don't feel like supporting multiple representations, call these
-
-"""
-    assert_timedim_last(img)
-
-Throw an error if the image has a time dimension that is not the last
-dimension.
-"""
-assert_timedim_last(img::AbstractArray) = nothing
-assert_timedim_last(img::AbstractMappedArray) = assert_timedim_last(parent(img))
-function assert_timedim_last(img::AbstractMultiMappedArray)
-    traititer(assert_timedim_last, parent(img)...)
-    return nothing
-end
-assert_timedim_last(img::OffsetArray) = assert_timedim_last(parent(img))
-assert_timedim_last(img::SubArray) = assert_timedim_last(parent(img))
-
 widthheight(img::AbstractArray) = length(axes(img,2)), length(axes(img,1))
 
 width(img::AbstractArray) = widthheight(img)[1]
@@ -118,11 +94,16 @@ _getindex_tuple(t::Tuple, ::Tuple{}) = ()
 
 
 ### Start new traits
+###
+###
 
 Base.@pure is_color(x::Symbol) = x === :color
 
 AxisIndices.@defdim color is_color
 
+###
+### Spatial traits
+###
 # yes, I'm abusing @pure
 Base.@pure function is_spatial(x::Symbol)
     return !is_time(x) && !is_color(x) && !is_observation(x)

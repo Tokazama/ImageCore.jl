@@ -16,13 +16,16 @@ if !isdefined(ColorTypes, :XRGB)
     const RGBX = RGB4
 end
 
+using AxisIndices
+using TimeAxes
+
+@reexport using TimeAxes
 @reexport using MosaicViews
 @reexport using PaddedViews
 using MappedArrays, Graphics
 using OffsetArrays # for show.jl
 using .ColorTypes: colorant_string
 using Colors: Fractional
-using MappedArrays: AbstractMultiMappedArray
 
 using Base: tail, @pure, Indices
 import Base: float
@@ -87,16 +90,23 @@ export
     takemap,
     # traits
     assert_timedim_last,
-    coords_spatial,
     height,
-    indices_spatial,
     namedaxes,
     nimages,
-    pixelspacing,
+    pixel_spacing,
     sdims,
-    size_spatial,
-    spacedirections,
-    spatialorder,
+    spatial_indices,
+    spatial_keys,
+    spatial_size,
+    spatial_directions,
+    spatial_order,
+    colordim,
+    color_axis,
+    color_axis_type,
+    color_keys,
+    color_indices,
+    ncolor,
+    select_colordim,
     width,
     widthheight
 
