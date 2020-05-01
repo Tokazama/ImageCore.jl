@@ -76,23 +76,6 @@ function checksame(t::Tuple)
     return val1
 end
 
-@inline _subarray_filter(x, i::Real, inds...) =
-    _subarray_filter(tail(x), inds...)
-@inline _subarray_filter(x, i, inds...) =
-    (x[1], _subarray_filter(tail(x), inds...)...)
-_subarray_filter(x::Tuple{}) = ()
-
-@inline _subarray_offset(off, x, i::Real, inds...) =
-    _subarray_offset(off-1, tail(x), inds...)
-@inline _subarray_offset(off, x, i, inds...) =
-    (x[1]+off, _subarray_offset(off, tail(x), inds...)...)
-_subarray_offset(off, x::Tuple{}) = ()
-
-@inline _getindex_tuple(t::Tuple, inds::Tuple) =
-    (t[inds[1]], _getindex_tuple(t, tail(inds))...)
-_getindex_tuple(t::Tuple, ::Tuple{}) = ()
-
-
 ### Start new traits
 ###
 ###
