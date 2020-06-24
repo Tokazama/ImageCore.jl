@@ -21,4 +21,24 @@ end
 
 ColorView(parent::AbstractArray) = error("must specify the colortype, use colorview(C, A)")
 
-Base.@deprecate_binding squeeze1 true
+if VERSION < v"1.5"
+    Base.@deprecate_binding squeeze1 true
+end
+
+# deprecations since "The Great Refactoring"
+
+@deprecate pixelspacing pixel_spacing
+
+@deprecate spacedirections spatial_directions
+
+@deprecate coords_spatial spatialdims
+
+@deprecate indices_spatial spatial_indices
+
+@deprecate size_spatial spatial_size
+
+@deprecate spatialorder spatial_order
+
+@deprecate namedaxes named_axes
+
+@deprecate nimages ntime

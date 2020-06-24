@@ -1,5 +1,5 @@
-using Colors, ImageCore, OffsetArrays, FixedPointNumbers, Test
-using OffsetArrays: IdentityUnitRange
+using Colors, ImageCore, OffsetAxes, FixedPointNumbers, Test
+using OffsetAxes: IdentityUnitRange
 
 # backward-compatibility to ColorTypes < v0.9 or Colors < v0.11
 using ImageCore: XRGB, RGBX

@@ -153,3 +153,4 @@ If the input is Type `T`, then it is equivalent to [`floattype`](@ref).
 """
 float(x::Colorant) = floattype(typeof(x))(x)
 float(::Type{T}) where T <: Colorant = floattype(T)
+

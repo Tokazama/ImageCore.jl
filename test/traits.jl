@@ -15,19 +15,41 @@ using ImageCore: Pixel, NumberLike, GenericImage, GenericGrayImage, default_name
                       (colorview(RGB, zeros(3, 5), zeroarray, zeros(3, 5)), false))
         @test pixelspacing(B) == (1,1)
         if !isa(B, SubArray)
+            @test spatial_directions(B) == (swap ? ((0,1),(1,0)) : ((1,0),(0,1)))
+        else
+            @test spatial_directions(B) == ((1,0,0), (0,0,1))
+        end
+        # Deprecated
+        if !isa(B, SubArray)
             @test spacedirections(B) == (swap ? ((0,1),(1,0)) : ((1,0),(0,1)))
         else
             @test spacedirections(B) == ((1,0,0), (0,0,1))
         end
+
         @test sdims(B) == 2
+
+        @test spatialdims(B) == (swap ? (2,1) : (1,2))
+        # Deprecated
         @test coords_spatial(B) == (swap ? (2,1) : (1,2))
+
         @test nimages(B) == 1
+
+        @test spatial_size(B) == (3,5)
+        # Deprecated
         @test size_spatial(B) == (3,5)
+
+        if isa(B, OffsetArray)
+            @test spatial_indices(B) == (-1:1, -2:2)
+        else
+            @test spatial_indices(B) == (Base.OneTo(3), Base.OneTo(5))
+        end
+        # Deprecated
         if isa(B, OffsetArray)
             @test indices_spatial(B) == (-1:1, -2:2)
         else
             @test indices_spatial(B) == (Base.OneTo(3), Base.OneTo(5))
         end
+
         assert_timedim_last(B)
         @test width(B) == 5
         @test height(B) == 3
@@ -173,17 +195,21 @@ Base.axes(rv::RowVector) = axes(rv.v)
 
 @testset "Trait Interface" begin
     img = reshape(1:24, 2,3,4)
+
+    @test @inferred(named_axes(img)) == NamedTuple{(:dim_1, :dim_2, :dim_3)}(axes(img))
+    # Deprecated
     @test @inferred(namedaxes(img)) == NamedTuple{(:dim_1, :dim_2, :dim_3)}(axes(img))
+
     @test @inferred(HasDimNames(img)) == HasDimNames{false}()
     @test @inferred(HasProperties(img)) == HasProperties{false}()
 
     rv = RowVector([1:10...], Dict{String,Any}())
     @test @inferred(HasDimNames(rv)) == HasDimNames{true}()
     @test @inferred(HasProperties(rv)) == HasProperties{true}()
-    @test @inferred(namedaxes(rv)) == NamedTuple{(:row,)}((Base.OneTo(10),))
 
-    # default names
-    @test @inferred(default_names(Val(3))) == (:dim_1, :dim_2, :dim_3)
+    @test @inferred(named_axes(rv)) == NamedTuple{(:row,)}((Base.OneTo(10),))
+    # Deprecated
+    @test @inferred(namedaxes(rv)) == NamedTuple{(:row,)}((Base.OneTo(10),))
 end
 
 nothing

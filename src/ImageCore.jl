@@ -17,13 +17,12 @@ if !isdefined(ColorTypes, :XRGB)
 end
 
 using AxisIndices
-using TimeAxes
 
 @reexport using TimeAxes
+
 @reexport using MosaicViews
 @reexport using PaddedViews
 using MappedArrays, Graphics
-using OffsetArrays # for show.jl
 using .ColorTypes: colorant_string
 using Colors: Fractional
 
@@ -88,11 +87,8 @@ export
     scaleminmax,
     scalesigned,
     takemap,
-    # traits
-    assert_timedim_last,
+    # spatial
     height,
-    namedaxes,
-    nimages,
     pixel_spacing,
     sdims,
     spatial_indices,
@@ -100,23 +96,52 @@ export
     spatial_size,
     spatial_directions,
     spatial_order,
-    colordim,
-    color_axis,
-    color_axis_type,
-    color_keys,
-    color_indices,
-    ncolor,
-    select_colordim,
+    # channels
+    channeldim,
+    channel_axis,
+    channel_axis_type,
+    channel_keys,
+    channel_indices,
+    nchannel,
+    select_channeldim,
     width,
     widthheight
+
+is_channel(x::Symbol) = x === :channel || x === :Channel || is_color(x)
+AxisIndices.@defdim channel is_channel
 
 include("colorchannels.jl")
 include("stackedviews.jl")
 include("convert_reinterpret.jl")
-include("traits.jl")
 include("map.jl")
 include("show.jl")
 include("deprecations.jl")
+
+"""
+    HasProperties(img) -> HasProperties{::Bool}
+
+Returns the trait `HasProperties`, indicating whether `x` has `properties`
+method.
+"""
+struct HasProperties{T} end
+
+HasProperties(img::T) where T = HasProperties(T)
+
+HasProperties(::Type{T}) where T = HasProperties{false}()
+
+"""
+    HasDimNames(img) -> HasDimNames{::Bool}
+
+Returns the trait `HasDimNames`, indicating whether `x` has named dimensions.
+Types returning `HasDimNames{true}()` should also have a `names` method that
+returns a tuple of symbols for each dimension.
+"""
+struct HasDimNames{T} end
+
+HasDimNames(img::T) where T = HasDimNames(T)
+
+HasDimNames(::Type{T}) where T = HasDimNames{false}()
+
 
 """
     rawview(img::AbstractArray{FixedPoint})
@@ -147,17 +172,6 @@ normedview(::Type{T}, a::Array{S}) where {T<:FixedPoint,S<:Unsigned} = reinterpr
 normedview(::Type{T}, a::AbstractArray{T}) where {T<:Normed} = a
 normedview(a::AbstractArray{UInt8}) = normedview(N0f8, a)
 normedview(a::AbstractArray{T}) where {T<:Normed} = a
-
-"""
-    permuteddimsview(A, perm)
-
-returns a "view" of `A` with its dimensions permuted as specified by
-`perm`. This is like `permutedims`, except that it produces a view
-rather than a copy of `A`; consequently, any manipulations you make to
-the output will be mirrored in `A`. Compared to the copy, the view is
-much faster to create, but generally slower to use.
-"""
-permuteddimsview(A, perm) = Base.PermutedDimsArrays.PermutedDimsArray(A, perm)
 
 # PaddedViews support
 # This make sure Colorants as `fillvalue` are correctly filled, for example, let
