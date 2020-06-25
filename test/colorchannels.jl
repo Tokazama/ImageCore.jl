@@ -1,5 +1,4 @@
-using Colors, ImageCore, OffsetAxes, FixedPointNumbers, Test
-using OffsetAxes: IdentityUnitRange
+using Colors, ImageCore, FixedPointNumbers, Test
 
 # backward-compatibility to ColorTypes < v0.9 or Colors < v0.11
 using ImageCore: XRGB, RGBX
@@ -199,6 +198,7 @@ end
         @test size(c) == (4,5,5)
     end
 
+    #= FIXME using AxisIndices.OffsetArray
     @testset "Non-1 indices" begin
         a = OffsetArray(rand(RGB{N0f8}, 3, 5), -1:1, -2:2)
         v = @inferred(channelview(a))
@@ -212,6 +212,7 @@ end
         v[5] = -1
         @test v[5] === -1.0f0
     end
+    =#
 end
 
 end
@@ -395,6 +396,7 @@ end
         @test size(c) == (5,5)
     end
 
+    #= FIXME using AxisIndices.OffsetArray
     @testset "Non-1 indices" begin
         a = OffsetArray(rand(3, 3, 5), 1:3, -1:1, -2:2)
         v = @inferred(colorview(RGB, a))
@@ -403,6 +405,7 @@ end
         a = OffsetArray(rand(3, 3, 5), 0:2, -1:1, -2:2)
         @test_throws DimensionMismatch colorview(RGB, a)
     end
+    =#
 end
 
 end

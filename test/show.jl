@@ -1,4 +1,4 @@
-using ImageCore, Colors, FixedPointNumbers, OffsetArrays, Test
+using ImageCore, Colors, FixedPointNumbers, Test
 
 if VERSION >= v"1.2.0-DEV.229"
     sumsz(img) = Base.dims2string(size(img)) * ' '

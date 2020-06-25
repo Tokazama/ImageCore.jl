@@ -38,9 +38,12 @@ Note that a better strategy may be to use ImagesAxes and take slices along the t
 
 Returns a tuple of each axis corresponding to a spatial dimensions.
 """
-@inline spatial_axes(x) = _spatial_axes(named_axes(x), spatial_order(x))
-function _spatial_axes(na::NamedTuple, spo::Tuple{Vararg{Symbol}})
-    return map(spo_i -> getfield(na, spo_i), spo)
+@inline function spatial_axes(x::AbstractArray{T,N}) where {T,N}
+    if has_dimnames(x)
+        return map(n -> axes(x, n), spatial_order(x))
+    else
+        return ntuple(i -> axes(x, i), Val(min(N,3)))
+    end
 end
 
 """
@@ -72,10 +75,10 @@ of the image. Derived from the step size of each element of `spatial_keys`.
 """
 @inline function pixel_spacing(x)
     map(spatial_keys(x)) do ks_i
-        if StaticRanges.has_step(ks_i)
+        if AxisIndices.StaticRanges.has_step(ks_i)
             return step(ks_i)
         else
-            return 0
+            return 1
         end
     end
 end
@@ -98,13 +101,13 @@ coordinates").
 By default this is computed from `pixel_spacing`, but you can set this
 manually using ImagesMeta.
 """
-spatial_direction(x) = _spatial_directions(x,l spatialdims(x))
+spatial_directions(x) = _spatial_directions(x, spatialdims(x))
 function _spatial_directions(x::AbstractArray, spatdims::NTuple{N,Int}) where {N}
     ntuple(Val(N)) do j
         ntuple(Val(N)) do i
             if j === i
                 ks = axes_keys(x, getfield(spatdims, i))
-                if StaticRanges.has_step(ks)
+                if AxisIndices.StaticRanges.has_step(ks)
                     return step(ks)
                 else
                     return 1  # TODO If keys are not range does it make sense to return this?

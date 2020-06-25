@@ -17,6 +17,7 @@ if !isdefined(ColorTypes, :XRGB)
 end
 
 using AxisIndices
+using AxisIndices.ObservationDims
 
 @reexport using TimeAxes
 
@@ -91,6 +92,7 @@ export
     height,
     pixel_spacing,
     sdims,
+    spatialdims,
     spatial_indices,
     spatial_keys,
     spatial_size,
@@ -107,7 +109,7 @@ export
     width,
     widthheight
 
-is_channel(x::Symbol) = x === :channel || x === :Channel || is_color(x)
+is_channel(x::Symbol) = x === :channel || x === :Channel || x === :Color || x === :Color
 AxisIndices.@defdim channel is_channel
 
 include("colorchannels.jl")
@@ -115,6 +117,7 @@ include("stackedviews.jl")
 include("convert_reinterpret.jl")
 include("map.jl")
 include("show.jl")
+include("spatial.jl")
 include("deprecations.jl")
 
 """

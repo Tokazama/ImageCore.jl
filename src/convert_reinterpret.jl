@@ -92,25 +92,35 @@ function Base.convert(::Type{Array{Cdest}},
     convert(Array{Cdest,n}, img)
 end
 
-function Base.convert(::Type{Array{Cdest,n}},
-                      img::BitArray{n}) where {Cdest<:Color1,n}
-    copyto!(Array{ccolor(Cdest, Gray{Bool})}(undef, size(img)), img)
+function Base.convert(
+    ::Type{Array{Cdest,n}},
+    img::BitArray{n}
+) where {Cdest<:Color1,n}
+
+    return copyto!(Array{ccolor(Cdest, Gray{Bool})}(undef, size(img)), img)
 end
 
-function Base.convert(::Type{Array{Cdest,n}},
-                      img::AbstractArray{T,n}) where {Cdest<:Color1,n,T<:Real}
-    copyto!(Array{ccolor(Cdest, Gray{T})}(undef, size(img)), img)
+function Base.convert(
+    ::Type{Array{Cdest,n}},
+    img::AbstractArray{T,n}
+) where {Cdest<:Color1,n,T<:Real}
+
+    return copyto!(Array{ccolor(Cdest, Gray{T})}(undef, size(img)), img)
 end
 
-function Base.convert(::Type{OffsetArray{Cdest,n,A}},
-                      img::AbstractArray{Csrc,n}) where {Cdest<:Colorant,n, A <:AbstractArray,Csrc<:Colorant}
-    copyto!(OffsetArray{ccolor(Cdest, Csrc)}(undef, axes(img)),img)
+#=
+function Base.convert(
+    ::Type{<:AxisArray{Cdest,<:Any,A}},
+    img::AbstractArray{Csrc,N}
+) where {Cdest<:Colorant,Csrc<:Colorant,N,A<:AbstractArray{Cdest}}
+
+    return copyto!(AxisArray{ccolor(Cdest, Csrc),N,A}(undef, axes(img)), img)
 end
 
-function Base.convert(::Type{OffsetArray{C,n,A}},
-                      img::AbstractArray{C,n}) where {C<:Colorant,n, A <:AbstractArray}
-    img
+function Base.convert(::Type{OffsetArray{C,n,A}}, img::AbstractArray{C,n}) where {C<:Colorant,n, A <:AbstractArray}
+    return img
 end
+=#
 
 # for docstrings in the operations below
 shortname(::Type{T}) where {T<:FixedPoint} = (io = IOBuffer(); FixedPointNumbers.showtype(io, T); String(take!(io)))

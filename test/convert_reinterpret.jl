@@ -1,4 +1,4 @@
-using ImageCore, Colors, FixedPointNumbers, OffsetArrays
+using ImageCore, Colors, FixedPointNumbers
 using Test, Random
 
 @testset "reinterpret" begin
@@ -163,7 +163,7 @@ end
                  Gray.(N0f8.(A)),
                  Gray.(N0f16.(A)) )
         imgo = OffsetArray(img, -2, -1)
-        s = @inferred(convert(OffsetArray{Gray{Float32},2,Array{Gray{Float32}}},imgo))
+        s = @inferred(convert(OffsetArray{Gray{Float32},2,Array{Gray{Float32},2}}, imgo))
         @test eltype(s) == Gray{Float32}
         @test s isa OffsetArray{Gray{Float32},2,Array{Gray{Float32},2}}
         @test permutedims(permutedims(s,(2,1)),(2,1)) == s
@@ -174,7 +174,7 @@ end
                  Gray.(N0f8.(A)),
                  Gray.(N0f16.(A)) )
         imgo = OffsetArray(img, -2, -1)
-        s = @inferred(convert(OffsetArray{Gray{N0f8},2,Array{Gray{N0f8}}},imgo))
+        s = @inferred(convert(OffsetArray{Gray{N0f8},2,Array{Gray{N0f8},2}}, imgo))
         @test eltype(s) == Gray{N0f8}
         @test s isa OffsetArray{Gray{N0f8},2,Array{Gray{N0f8},2}}
         @test permutedims(permutedims(s,(2,1)),(2,1)) == s
@@ -185,7 +185,7 @@ end
                  Gray.(N0f8.(A)),
                  Gray.(N0f16.(A)) )
         imgo = OffsetArray(img, -2, -1)
-        s = @inferred(convert(OffsetArray{Gray{N0f16},2,Array{Gray{N0f16}}},imgo))
+        s = @inferred(convert(OffsetArray{Gray{N0f16},2,Array{Gray{N0f16},2}},imgo))
         @test eltype(s) == Gray{N0f16}
         @test s isa OffsetArray{Gray{N0f16},2,Array{Gray{N0f16},2}}
         @test permutedims(permutedims(s,(2,1)),(2,1)) == s
@@ -201,7 +201,7 @@ end
                  n2f14.(A),
                  n0f16.(A))
         imgo = OffsetArray(img, -2, -1)
-        s = @inferred(convert(OffsetArray{RGB{N0f8},2,Array{RGB{N0f8}}},imgo))
+        s = @inferred(convert(OffsetArray{RGB{N0f8},2,Array{RGB{N0f8},2}},imgo))
         @test eltype(s) == RGB{N0f8}
         @test s isa OffsetArray{RGB{N0f8},2,Array{RGB{N0f8},2}}
         @test permutedims(permutedims(s,(2,1)),(2,1)) == s
@@ -216,7 +216,7 @@ end
                  n2f14.(A),
                  n0f16.(A))
         imgo = OffsetArray(img, -2, -1)
-        s = @inferred(convert(OffsetArray{RGB{Float32},2,Array{RGB{Float32}}},imgo))
+        s = @inferred(convert(OffsetArray{RGB{Float32},2,Array{RGB{Float32},2}},imgo))
         @test eltype(s) == RGB{Float32}
         @test s isa OffsetArray{RGB{Float32},2,Array{RGB{Float32},2}}
         @test permutedims(permutedims(s,(2,1)),(2,1)) == s
