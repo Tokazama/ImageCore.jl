@@ -13,6 +13,8 @@ using ImageCore: Pixel, NumberLike, GenericImage, GenericGrayImage
                       (permuteddimsview(rand(5, 3), (2, 1)), true),
                       (mappedarray(identity, permuteddimsview(rand(5, 3), (2, 1))), true),
                       (colorview(RGB, zeros(3, 5), zeroarray, zeros(3, 5)), false))
+        @test pixel_spacing(B) == (1,1)
+        # Deprecated
         @test pixelspacing(B) == (1,1)
         if !isa(B, SubArray)
             @test spatial_directions(B) == (swap ? ((0,1),(1,0)) : ((1,0),(0,1)))

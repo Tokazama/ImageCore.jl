@@ -1,14 +1,23 @@
 
-Base.@pure is_spatial(x::Symbol) = !(is_time(x) || is_observation(x) || is_channel(x))
+# yes this abuses @pure but each of these is a pure method and it's the only way I
+# could get names to propagate through other operations.
+Base.@pure is_spatial(x::Symbol) = !(is_time(x) || is_observation(x) || is_channel(x) || x === :_)
 
 """
     spatial_order(x) -> Tuple{Vararg{Symbol}}
 
 Returns the `dimnames` of `x` that correspond to spatial dimensions.
 """
-spatial_order(x::X) where {X} = _spatial_order(Val(dimnames(X)))
+function spatial_order(x::X) where {X}
+    if has_dimnames(X)
+        return _spatial_order(Val(dimnames(X)))
+    else
+        return AxisIndices.Interface.default_names(Val(min(3, ndims(X))))
+    end
+end
+
 @generated function _spatial_order(::Val{L}) where {L}
-    keep_names = []
+    keep_dims = Int[]
     i = 1
     itr = 0
     while (itr < 3) && (i <= length(L))
@@ -24,14 +33,29 @@ spatial_order(x::X) where {X} = _spatial_order(Val(dimnames(X)))
     end
 end
 
-
 """
     spatialdims(x) -> Tuple{Vararg{Int}}
 
 Return a tuple listing the spatial dimensions of `img`.
 Note that a better strategy may be to use ImagesAxes and take slices along the time axis.
 """
-@inline spatialdims(x) = dim(dimnames(x), spatial_order(x))
+@inline function spatialdims(x::AbstractArray{T,N}) where {T,N}
+    if has_dimnames(x)
+        return _spatialdims(dimnames(x))
+    else
+        return ntuple(+, Val(min(N, 3)))
+    end
+end
+
+_spatialdims(dnames::Tuple{}, cnt::Int) = ()
+@inline function _spatialdims(dnames::Tuple{Vararg{Symbol}}, cnt::Int)
+    if is_spatial(first(dnames))
+        return (cnt, (tail(dnames), cnt + 1)...)
+    else
+        return (tail(dnames), cnt + 1)
+    end
+end
+
 
 """
     spatial_axes(x) -> Tuple
@@ -39,11 +63,7 @@ Note that a better strategy may be to use ImagesAxes and take slices along the t
 Returns a tuple of each axis corresponding to a spatial dimensions.
 """
 @inline function spatial_axes(x::AbstractArray{T,N}) where {T,N}
-    if has_dimnames(x)
-        return map(n -> axes(x, n), spatial_order(x))
-    else
-        return ntuple(i -> axes(x, i), Val(min(N,3)))
-    end
+    return map(n -> axes(x, n), spatialdims(x))
 end
 
 """
@@ -90,34 +110,6 @@ The offset of each dimension (i.e., where each spatial axis starts).
 """
 spatial_offset(x) = map(first, spatial_keys(x))
 
-"""
-    spatial_directions(x) -> (axis1, axis2, ...)
-
-Return a tuple-of-tuples, each `axis[i]` representing the displacement
-vector between adjacent pixels along spatial axis `i` of the image
-array, relative to some external coordinate system ("physical
-coordinates").
-
-By default this is computed from `pixel_spacing`, but you can set this
-manually using ImagesMeta.
-"""
-spatial_directions(x) = _spatial_directions(x, spatialdims(x))
-function _spatial_directions(x::AbstractArray, spatdims::NTuple{N,Int}) where {N}
-    ntuple(Val(N)) do j
-        ntuple(Val(N)) do i
-            if j === i
-                ks = axes_keys(x, getfield(spatdims, i))
-                if AxisIndices.StaticRanges.has_step(ks)
-                    return step(ks)
-                else
-                    return 1  # TODO If keys are not range does it make sense to return this?
-                end
-            else
-                return 0
-            end
-        end
-    end
-end
 
 """
     sdims(x)
@@ -171,49 +163,78 @@ function _spatial_directions_to_rotation(::Type{R}, sd::NTuple{3,NTuple{3,T}}) w
     )
 end
 
-
-#= TODO Is this a good name for this
-"The anatomical coordinate system."
-@defprop AnatomicalSystem{:anatsystem}
-
-"The acquisition coordinate system."
-@defprop AcquisitionSystem{:acqsystem}
-=#
-
-"""
-    CoordinateSpace
-
-Returns an instance of `CoordinateSystem` describing the coordinate system for `x`.
-"""
-struct CoordinateSpace{S}
-    space::S
-end
-
-const UnkownCoordinatesSpace = CoordinateSpace(nothing)
-
-coordinate_space(x) = UnkownCoordinatesSystem
-
-#= TODO formalize this interaction
-CoordinateSpace(sc::MetadataArray{T,N,<:CoordinateSystem}) = metadata(sc)
-
-CoordinateSpace(sc::AbstractAxisArray) = (parent(sc))
-
-CoordinateSpace(sc::NamedDimsArray) = (parent(sc))
-=#
-
-# TODO document SpatialCoordinates
-"""
-    SpatialCoordinates
-
-"""
-const SpatialCoordinates{L,CS,N,Axs} = NamedMetaCartesianAxes{L,N,CoordinateSpace{CS},Axs}
-
-function SpatialCoordinates(x)
-    return NamedMetaCartesianAxes{spatial_order(x)}(spatial_axes(x), metadata=CoordinateSpace(x))
-end
-
-
 widthheight(img::AbstractArray) = length(axes(img,2)), length(axes(img,1))
 width(img::AbstractArray) = widthheight(img)[1]
 height(img::AbstractArray) = widthheight(img)[2]
 
+"""
+    spatial_directions(img) -> (axis1, axis2, ...)
+
+Return a tuple-of-tuples, each `axis[i]` representing the displacement
+vector between adjacent pixels along spatial axis `i` of the image
+array, relative to some external coordinate system ("physical
+coordinates").
+
+By default this is computed from `pixel_spacing`, but you can set this
+manually using ImagesMeta.
+"""
+spatial_directions(img::AbstractArray) = _spatial_directions(pixel_spacing(img))
+
+#spatial_directions(img) = _spatial_directions(img, spatialdims(x))
+#=
+function _spatial_directions(img::AbstractArray{T,N}, spatdims::Tuple{Vararg{Int}}) where {N}
+    map(spatdims) do i
+        axis = axes(img, i)
+        if hasproperty(axis, :spatial_directions)
+            return getproperty(x, :spatial_directions)
+        else
+            ntuple(Val(N)) do j
+                if j === i
+                    ks = keys(axis)
+                    if AxisIndices.StaticRanges.has_step(ks)
+                        return step(ks)
+                    else
+                        return 1  # If keys are not range then just treat as one unit spacing
+                    end
+                else
+                    return 0
+                end
+            end
+        end
+    end
+end
+=#
+
+# FIXME
+spatial_directions(img::AbstractMappedArray) = patial_directions(parent(img))
+function spatial_directions(img::AbstractMultiMappedArray)
+    ps = traititer(spatial_directions, parent(img)...)
+    checksame(ps)
+end
+@inline function spatial_directions(img::SubArray) =
+    return _subarray_filter(spatial_directions(parent(img)), getfield(img, :indices)...)
+end
+
+@inline spatial_directions(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm}
+    return _getindex_tuple(spatial_directions(parent(img)), perm)
+end
+
+function _spatial_directions(ps::NTuple{N,Any}) where N
+    return ntuple(i->ntuple(d->d==i ? ps[d] : zero(ps[d]), Val(N)), Val(N))
+end
+
+@inline _subarray_filter(x, i::Real, inds...) =
+    _subarray_filter(tail(x), inds...)
+@inline _subarray_filter(x, i, inds...) =
+    (x[1], _subarray_filter(tail(x), inds...)...)
+_subarray_filter(x::Tuple{}) = ()
+
+@inline _subarray_offset(off, x, i::Real, inds...) =
+    _subarray_offset(off-1, tail(x), inds...)
+@inline _subarray_offset(off, x, i, inds...) =
+    (x[1]+off, _subarray_offset(off, tail(x), inds...)...)
+_subarray_offset(off, x::Tuple{}) = ()
+
+@inline _getindex_tuple(t::Tuple, inds::Tuple) =
+    (t[inds[1]], _getindex_tuple(t, tail(inds))...)
+_getindex_tuple(t::Tuple, ::Tuple{}) = ()
