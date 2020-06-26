@@ -33,7 +33,7 @@ end
 
 @deprecate coords_spatial spatialdims
 
-@deprecate indices_spatial spatial_indices
+@deprecate indices_spatial spatial_axes
 
 @deprecate size_spatial spatial_size
 

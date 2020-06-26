@@ -23,7 +23,9 @@ using AxisIndices.ObservationDims
 
 @reexport using MosaicViews
 @reexport using PaddedViews
-using MappedArrays, Graphics
+using MappedArrays
+using MappedArrays: AbstractMultiMappedArray
+using Graphics
 using .ColorTypes: colorant_string
 using Colors: Fractional
 
@@ -93,6 +95,7 @@ export
     pixel_spacing,
     sdims,
     spatialdims,
+    spatial_axes,
     spatial_indices,
     spatial_keys,
     spatial_size,

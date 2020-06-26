@@ -41,9 +41,9 @@ using ImageCore: Pixel, NumberLike, GenericImage, GenericGrayImage
         @test size_spatial(B) == (3,5)
 
         if isa(B, OffsetArray)
-            @test spatial_indices(B) == (-1:1, -2:2)
+            @test spatial_axes(B) == (-1:1, -2:2)
         else
-            @test spatial_indices(B) == (Base.OneTo(3), Base.OneTo(5))
+            @test spatial_axes(B) == (Base.OneTo(3), Base.OneTo(5))
         end
         # Deprecated
         if isa(B, OffsetArray)
@@ -187,11 +187,8 @@ struct RowVector{T,P} <: AbstractVector{T}
     p::P
 end
 
-ImageCore.HasDimNames(::Type{<:RowVector}) = HasDimNames{true}()
-
-ImageCore.HasProperties(::Type{<:RowVector}) = HasProperties{true}()
-
-Base.names(::RowVector) = (:row,)
+AxisIndices.has_dimnames(::Type{<:RowVector}) = true
+AxisIndices.dimnames(::RowVector) = (:row,)
 Base.axes(rv::RowVector) = axes(rv.v)
 
 
@@ -202,12 +199,7 @@ Base.axes(rv::RowVector) = axes(rv.v)
     # Deprecated
     @test @inferred(namedaxes(img)) == NamedTuple{(:dim_1, :dim_2, :dim_3)}(axes(img))
 
-    @test @inferred(HasDimNames(img)) == HasDimNames{false}()
-    @test @inferred(HasProperties(img)) == HasProperties{false}()
-
     rv = RowVector([1:10...], Dict{String,Any}())
-    @test @inferred(HasDimNames(rv)) == HasDimNames{true}()
-    @test @inferred(HasProperties(rv)) == HasProperties{true}()
 
     @test @inferred(named_axes(rv)) == NamedTuple{(:row,)}((Base.OneTo(10),))
     # Deprecated

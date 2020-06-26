@@ -1,7 +1,7 @@
 
 # yes this abuses @pure but each of these is a pure method and it's the only way I
 # could get names to propagate through other operations.
-Base.@pure is_spatial(x::Symbol) = !(is_time(x) || is_observation(x) || is_channel(x) || x === :_)
+Base.@pure is_spatial(x::Symbol) = !(is_time(x) || is_observation(x) || is_channel(x))
 
 """
     spatial_order(x) -> Tuple{Vararg{Symbol}}
@@ -46,7 +46,6 @@ Note that a better strategy may be to use ImagesAxes and take slices along the t
         return ntuple(+, Val(min(N, 3)))
     end
 end
-
 _spatialdims(dnames::Tuple{}, cnt::Int) = ()
 @inline function _spatialdims(dnames::Tuple{Vararg{Symbol}}, cnt::Int)
     if is_spatial(first(dnames))
@@ -55,6 +54,16 @@ _spatialdims(dnames::Tuple{}, cnt::Int) = ()
         return (tail(dnames), cnt + 1)
     end
 end
+spatialdims(img::AbstractMappedArray) = coords_spatial(parent(img))
+function spatialdims(img::AbstractMultiMappedArray)
+    ps = traititer(spatialdims, parent(img)...)
+    checksame(ps)
+end
+spatialdims(img::OffsetArray) = coords_spatial(parent(img))
+@inline spatialdims(img::SubArray) =
+    _subarray_offset(0, spatialdims(parent(img)), img.indices...)
+@inline spatialdims(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm,iperm}) where {T,N,perm,iperm} =
+    _getindex_tuple(spatialdims(parent(img)), iperm)
 
 
 """
@@ -62,16 +71,33 @@ end
 
 Returns a tuple of each axis corresponding to a spatial dimensions.
 """
-@inline function spatial_axes(x::AbstractArray{T,N}) where {T,N}
-    return map(n -> axes(x, n), spatialdims(x))
+spatial_axes(img) = axes(img)
+spatial_axes(img::AbstractMappedArray) = indices_spatial(parent(img))
+function spatial_axes(img::AbstractMultiMappedArray)
+    ps = traititer(spatial_axes, parent(img)...)
+    checksame(ps)
 end
+@inline spatial_axes(img::SubArray) =
+    _subarray_filter(spatial_axes(parent(img)), img.indices...)
+@inline spatial_axes(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
+    _getindex_tuple(spatial_axes(parent(img)), perm)
 
 """
     spatial_size(x) -> Tuple{Vararg{Int}}
 
 Return a tuple listing the sizes of the spatial dimensions of the image.
 """
-@inline spatial_size(x) = map(length, spatial_axes(x))
+spatial_size(img) = size(img)
+spatial_size(img::AbstractMappedArray) = size_spatial(parent(img))
+function spatial_size(img::AbstractMultiMappedArray)
+    ps = traititer(spatial_size, parent(img)...)
+    checksame(ps)
+end
+spatial_size(img::OffsetArray) = size_spatial(parent(img))
+@inline spatial_size(img::SubArray) =
+    _subarray_filter(spatial_size(parent(img)), img.indices...)
+@inline spatial_size(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
+    _getindex_tuple(spatial_size(parent(img)), perm)
 
 """
     spatial_indices(x)
@@ -206,16 +232,16 @@ end
 =#
 
 # FIXME
-spatial_directions(img::AbstractMappedArray) = patial_directions(parent(img))
+spatial_directions(img::AbstractMappedArray) = spatial_directions(parent(img))
 function spatial_directions(img::AbstractMultiMappedArray)
     ps = traititer(spatial_directions, parent(img)...)
     checksame(ps)
 end
-@inline function spatial_directions(img::SubArray) =
+@inline function spatial_directions(img::SubArray)
     return _subarray_filter(spatial_directions(parent(img)), getfield(img, :indices)...)
 end
 
-@inline spatial_directions(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm}
+@inline function spatial_directions(img::Base.PermutedDimsArray{T,N,perm}) where {T,N,perm}
     return _getindex_tuple(spatial_directions(parent(img)), perm)
 end
 
@@ -238,3 +264,13 @@ _subarray_offset(off, x::Tuple{}) = ()
 @inline _getindex_tuple(t::Tuple, inds::Tuple) =
     (t[inds[1]], _getindex_tuple(t, tail(inds))...)
 _getindex_tuple(t::Tuple, ::Tuple{}) = ()
+
+@inline traititer(f, A, rest...) = (f(A), traititer(f, rest...)...)
+@inline traititer(f, A::ZeroArray, rest...) = traititer(f, rest...)
+traititer(f) = ()
+
+function checksame(t::Tuple)
+    val1 = t[1]
+    @assert all(p -> p == val1, t)
+    return val1
+end

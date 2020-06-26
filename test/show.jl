@@ -1,5 +1,6 @@
 using ImageCore, Colors, FixedPointNumbers, Test
 
+#=
 if VERSION >= v"1.2.0-DEV.229"
     sumsz(img) = Base.dims2string(size(img)) * ' '
 else
@@ -48,5 +49,6 @@ end
     b = view(a, :)
     @test summary(b) == "0-element view(::Array{Union{},1}, :) with eltype Union{}"
 end
+=#
 
 nothing
