@@ -1,15 +1,19 @@
 module ImageCoreTests
 
-using ImageCore
 using Test
+using AxisIndices
+using Colors
+using MosaicViews
+using PaddedViews
+pkgs = (AxisIndices, Base, Core, Test, MosaicViews, PaddedViews)
+ambs = detect_ambiguities(pkgs...);
+
+using ImageCore
+@test isempty(setdiff(detect_ambiguities(ImageCore, pkgs...), ambs))
+
+# FIXME can't use reference tests until it's updated
 #using ReferenceTests
 
-# FIXME Dependency on StaticArrays messes this up
-#= If we've run the tests previously, there might be ambiguities from other packages
-if :StatsBase ∉ map(x->Symbol(string(x)), values(Base.loaded_modules))
-    @test isempty(detect_ambiguities(ImageCore, Base, Core))
-end
-=#
 
 using Documenter
 DocMeta.setdocmeta!(ImageCore, :DocTestSetup, :(using ImageCore); recursive=true)

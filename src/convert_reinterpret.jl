@@ -72,18 +72,25 @@ Base.convert(::Type{Array{C,n}}, img::Array{C,n}) where {C<:Color1,n} = img
 Base.convert(::Type{Array{C}},   img::Array{C,n}) where {C<:Colorant,n} = img
 Base.convert(::Type{Array{C,n}}, img::Array{C,n}) where {C<:Colorant,n} = img
 
-function Base.convert(::Type{Array{Cdest}},
-                      img::AbstractArray{Csrc,n}) where {Cdest<:Colorant,n,Csrc<:Colorant}
-    convert(Array{Cdest,n}, img)
+function Base.convert(
+    ::Type{Array{Cdest}},
+    img::AbstractArray{Csrc,N}
+) where {Cdest<:Colorant,N,Csrc<:Colorant}
+    convert(Array{Cdest,N}, img)
 end
 
-function Base.convert(::Type{Array{Cdest,n}},
-                      img::AbstractArray{Csrc,n}) where {Cdest<:Colorant,n,Csrc<:Colorant}
+function Base.convert(
+    ::Type{Array{Cdest,N}},
+    img::AbstractArray{Csrc,N}
+) where {Cdest<:Colorant,N,Csrc<:Colorant}
     copyto!(Array{ccolor(Cdest, Csrc)}(undef, size(img)), img)
 end
 
-function Base.convert(::Type{Array{Cdest}},
-                      img::BitArray{n}) where {Cdest<:Color1,n}
+function Base.convert(
+    ::Type{Array{Cdest}},
+    img::BitArray{n}
+) where {Cdest<:Color1,n}
+
     convert(Array{Cdest,n}, img)
 end
 
@@ -101,12 +108,44 @@ function Base.convert(
 end
 
 function Base.convert(
-    ::Type{Array{Cdest,n}},
-    img::AbstractArray{T,n}
-) where {Cdest<:Color1,n,T<:Real}
+    ::Type{Array{Cdest,N}},
+    img::AbstractArray{T,N}
+) where {Cdest<:Color1,N,T<:Real}
 
     return copyto!(Array{ccolor(Cdest, Gray{T})}(undef, size(img)), img)
 end
+
+function Base.convert(
+    ::Type{Array{Cdest,N}},
+    img::ImageCore.AxisIndices.Arrays.StaticArrays.SizedArray{S,Csrc,N}
+) where {Cdest<:Colorant,N,Csrc<:Real,S}
+
+    return convert(Array{Cdest,N}, img.data)
+end
+
+function Base.convert(
+    ::Type{Array{Cdest,N}},
+    img::AxisIndices.Arrays.StaticArrays.SizedArray{S,Csrc,N}
+) where {Cdest<:Colorant,N,Csrc<:Colorant,S}
+
+    return convert(Array{Cdest,N}, img.data)
+end
+function Base.convert(
+    ::Type{Array{Cdest}},
+    img::AxisIndices.Arrays.StaticArrays.SizedArray{S,Csrc,N}
+) where {S,Cdest<:Colorant,N,Csrc<:Colorant}
+    convert(Array{Cdest,N}, img.data)
+end
+
+function Base.convert(
+    ::Type{Array{Cdest,N}},
+    img::AxisIndices.Arrays.StaticArrays.SizedArray{S,Csrc,N}
+) where {S,Cdest<:Color1,N,Csrc<:Real}
+
+    return copyto!(Array{ccolor(Cdest, Gray{T})}(undef, size(img)), img)
+end
+
+
 
 #=
 function Base.convert(
