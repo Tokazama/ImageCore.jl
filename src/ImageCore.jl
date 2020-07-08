@@ -18,6 +18,7 @@ end
 
 using AxisIndices
 using AxisIndices.ObservationDims
+using AxisIndices.Interface: NamedDimsArray
 
 @reexport using TimeAxes
 
@@ -108,9 +109,15 @@ export
     nchannel,
     select_channeldim,
     width,
-    widthheight
+    widthheight,
+    # streaming
+    IndexAny,
+    IndexIncremental,
+    StreamingContainer,
+    StreamIndexStyle,
+    getindex!
 
-is_channel(x::Symbol) = x === :channel || x === :Channel || x === :Color || x === :Color
+is_channel(x::Symbol) = x === :channel || x === :Channel || x === :Color || x === :color
 AxisIndices.@defdim channel is_channel
 
 include("colorchannels.jl")
@@ -120,6 +127,7 @@ include("map.jl")
 include("show.jl")
 include("spatial.jl")
 include("deprecations.jl")
+include("streamingcontainer.jl")
 
 """
     HasProperties(img) -> HasProperties{::Bool}

@@ -5,6 +5,7 @@ using AxisIndices
 using Colors
 using MosaicViews
 using PaddedViews
+using Unitful
 pkgs = (AxisIndices, Base, Core, Test, MosaicViews, PaddedViews)
 ambs = detect_ambiguities(pkgs...);
 
@@ -19,6 +20,10 @@ using Documenter
 DocMeta.setdocmeta!(ImageCore, :DocTestSetup, :(using ImageCore); recursive=true)
 doctest(ImageCore, manual = false)
 
+using MappedArrays
+using ImageCore: is_channel
+using ImageCore: XRGB, RGBX
+
 include("colorchannels.jl")
 include("views.jl")
 include("convert_reinterpret.jl")
@@ -26,6 +31,8 @@ include("traits.jl")
 include("map.jl")
 include("functions.jl")
 include("show.jl")
+#include("streamingcontainer.jl")
+include("spatial.jl")
 
 # run these last
 isCI = haskey(ENV, "CI") || get(ENV, "JULIA_PKGEVAL", false)

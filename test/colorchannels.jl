@@ -1,7 +1,6 @@
 using Colors, ImageCore, FixedPointNumbers, Test
 
 # backward-compatibility to ColorTypes < v0.9 or Colors < v0.11
-using ImageCore: XRGB, RGBX
 
 struct ArrayLF{T,N} <: AbstractArray{T,N}
     A::Array{T,N}
@@ -101,11 +100,13 @@ end
             @test size(c) == (3,5,5) && eltype(c) == Float16
         end
     end
+    #= FIXME
     a = reshape([RGB(1,0,0)])  # 0-dimensional
     v = @inferred(channelview(a))
     @test axes(v) === (Base.OneTo(3),)
     v = @inferred(channelview(a))
     @test axes(v) === (Base.OneTo(3),)
+    =#
 end
 
 @testset "Gray+Alpha" begin
@@ -407,6 +408,73 @@ end
     end
     =#
 end
+
+@testset "grayscale" begin
+    A = NamedAxisArray{(:y, :x)}(rand(Gray{N0f8}, 4, 5));
+    # FIXME
+    #@test summary(A) == "2-dimensional AxisArray{Gray{N0f8},2,...} with axes:\n    :y, Base.OneTo(4)\n    :x, Base.OneTo(5)\nAnd data, a 4×5 Array{Gray{N0f8},2} with eltype Gray{Normed{UInt8,8}}"
+    cv = channelview(A);
+    @test named_axes(cv) == (y = 1:4, x = 1:5)
+    @test spatial_order(cv) == (:y, :x)
+    @test_throws ArgumentError channeldim(cv)
+end
+
+@testset "color" begin
+    A = NamedAxisArray{(:y, :x)}(rand(RGB{N0f8}, 4, 5));
+    cv = channelview(A);
+    @test @inferred(named_axes(cv)) == (color = 1:3, y = 1:4, x = 1:5)
+    @test @inferred(spatial_order(cv)) == (:y, :x)
+    @test @inferred(channeldim(cv)) == 1
+    p = permuteddimsview(cv, (2,3,1))
+    @test @inferred(named_axes(p)) == (y = 1:4, x = 1:5, color = 1:3)
+    @test channeldim(p) == 3
+end
+
+@testset "nested" begin
+    A = NamedAxisArray(rand(RGB{N0f8}, 4, 5), y = range(1, step=2, length=4), x=1:5);
+    P = permuteddimsview(A, (2, 1));
+    @test @inferred(pixel_spacing(P)) == (1, 2)
+    M = mappedarray(identity, A)
+    @test @inferred(pixel_spacing(M)) == (2, 1)
+    s = u"s" # global const
+    μm = u"μm" # global const
+    tax = range(0.0s, step=0.1s, length=11)
+    A = NamedAxisArray(rand(N0f16, 4, 5, 11),
+                  y = range(1μm, step=2μm, length=4),
+                  x = range(1μm, step=1μm, length=5),
+                  time = tax)
+    P = permuteddimsview(A, (3, 1, 2));
+    M = mappedarray(identity, A);
+    @test @inferred(pixel_spacing(P)) == @inferred(pixel_spacing(M)) == (2μm, 1μm)
+    @test @inferred(time_keys(P)) == @inferred(time_keys(M)) == tax
+    @test has_timedim(P)
+    @test spatialdims(P) == (2, 3)
+    @test spatialdims(M) == (1, 2)
+    @test spatial_order(P) == spatial_order(M) == (:y, :x)
+    @test @inferred(spatial_size(P)) == @inferred(spatial_size(M)) == (4, 5)
+    @test_throws ErrorException assert_timedim_last(P)
+    assert_timedim_last(M)
+    A = NamedAxisArray(rand(N0f16, 11, 5, 4),
+                       (time = tax,
+                        x = range(1μm, step=1μm, length=5),
+                        y = range(1μm, step=2μm, length=4)))
+    P = permuteddimsview(A, (3, 2, 1))
+    M = mappedarray(identity, A)
+    @test @inferred(spatial_keys(P)) == ((1:2:7)μm, (1:5)μm)
+    @test @inferred(pixel_spacing(P)) == (2μm, 1μm)
+    @test @inferred(pixel_spacing(M)) == (1μm, 2μm)
+    @test @inferred(time_keys(P)) == @inferred(time_keys(M)) == tax
+    @test has_timedim(P)
+    @test spatialdims(P) == (1, 2)
+    @test spatialdims(M) == (2, 3)
+    @test spatial_order(P) == (:y, :x)
+    @test spatial_order(M) == (:x, :y)
+    @test @inferred(spatial_size(P)) == (4, 5)
+    @test @inferred(spatial_size(M)) == (5, 4)
+    assert_timedim_last(P)
+    @test_throws ErrorException assert_timedim_last(M)
+end
+
 
 end
 

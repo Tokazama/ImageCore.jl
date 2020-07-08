@@ -82,6 +82,24 @@ function channelview(A::AbstractArray{AC}) where {AC<:AlphaColor}
     CA = coloralpha(base_color_type(AC)){eltype(AC)}
     channelview(of_eltype(CA, A))
 end
+function channelview(A::NamedDimsArray{L,T,N}) where {L,T,N}
+    Ac = channelview(parent(A))
+    if ndims(Ac) === N
+        return NamedDimsArray{L}(Ac)
+    else
+        return NamedDimsArray{(:color, L...)}(Ac)
+    end
+end
+function channelview(A::AbstractAxisArray{T,N}) where {T,N}
+    Ac = channelview(parent(A))
+    if ndims(Ac) === N
+        return AxisIndices.unsafe_reconstruct(A, Ac, axes(A))
+    else
+        return AxisIndices.unsafe_reconstruct(A, Ac, (SimpleAxis(axes(Ac, 1)), axes(A)...))
+    end
+end
+
+
 
 """
     colorview(C, A)

@@ -22,9 +22,8 @@ function reinterpretc(::Type{T}, a::AbstractArray{CV}) where {T<:Number,CV<:Colo
     if samesize(T, CV)
         return reinterpret(T, a)
     end
-    axs = axes(a)
     if sizeof(CV) == sizeof(T)*_len(CV)
-        return reinterpret(T, reshape(a, Base.OneTo(1), axs...))
+        return reinterpret(T, reshape(a, (1, size(a)...)))
     end
     throw(ArgumentError("result shape not specified"))
 end

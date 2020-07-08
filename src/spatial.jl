@@ -1,23 +1,26 @@
 
 # yes this abuses @pure but each of these is a pure method and it's the only way I
 # could get names to propagate through other operations.
-Base.@pure is_spatial(x::Symbol) = !(is_time(x) || is_observation(x) || is_channel(x))
+Base.@pure function is_spatial(x::Symbol)
+    return !(is_time(x) || is_observation(x) || is_channel(x))
+end
+
 
 """
     spatial_order(x) -> Tuple{Vararg{Symbol}}
 
 Returns the `dimnames` of `x` that correspond to spatial dimensions.
 """
-function spatial_order(x::X) where {X}
-    if has_dimnames(X)
-        return _spatial_order(Val(dimnames(X)))
+@inline function spatial_order(::T) where {T}
+    if has_dimnames(T)
+        return _spatial_order(Val(dimnames(T)))
     else
-        return AxisIndices.Interface.default_names(Val(min(3, ndims(X))))
+        return AxisIndices.Interface.default_names(Val(min(3, ndims(T))))
     end
 end
 
 @generated function _spatial_order(::Val{L}) where {L}
-    keep_dims = Int[]
+    keep_names = Symbol[]
     i = 1
     itr = 0
     while (itr < 3) && (i <= length(L))
@@ -39,65 +42,71 @@ end
 Return a tuple listing the spatial dimensions of `img`.
 Note that a better strategy may be to use ImagesAxes and take slices along the time axis.
 """
-@inline function spatialdims(x::AbstractArray{T,N}) where {T,N}
+@inline function spatialdims(x::T) where {T}
     if has_dimnames(x)
-        return _spatialdims(dimnames(x))
+        return _spatialdims(Val(dimnames(x)))
     else
-        return ntuple(+, Val(min(N, 3)))
+        return ntuple(+, Val(min(ndims(T), 3)))
     end
 end
-_spatialdims(dnames::Tuple{}, cnt::Int) = ()
-@inline function _spatialdims(dnames::Tuple{Vararg{Symbol}}, cnt::Int)
-    if is_spatial(first(dnames))
-        return (cnt, (tail(dnames), cnt + 1)...)
-    else
-        return (tail(dnames), cnt + 1)
-    end
-end
-spatialdims(img::AbstractMappedArray) = coords_spatial(parent(img))
+
+spatialdims(img::AbstractMappedArray) = spatialdims(parent(img))
 function spatialdims(img::AbstractMultiMappedArray)
     ps = traititer(spatialdims, parent(img)...)
     checksame(ps)
 end
-spatialdims(img::OffsetArray) = coords_spatial(parent(img))
+# TODO remove spatialdims(img::OffsetArray) = coords_spatial(parent(img))
 @inline spatialdims(img::SubArray) =
     _subarray_offset(0, spatialdims(parent(img)), img.indices...)
-@inline spatialdims(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm,iperm}) where {T,N,perm,iperm} =
-    _getindex_tuple(spatialdims(parent(img)), iperm)
+@inline function spatialdims(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm,iperm}) where {T,N,perm,iperm}
+    return _getindex_tuple(spatialdims(parent(img)), iperm)
+end
 
+@generated function _spatialdims(::Val{L}) where {L}
+    keep_names = Int[]
+    i = 1
+    itr = 0
+    while (itr < 3) && (i <= length(L))
+        if is_spatial(getfield(L, i))
+            push!(keep_names, i)
+            itr += 1
+        end
+        i += 1
+    end
+    quote
+        return $(keep_names...,)
+    end
+end
 
 """
     spatial_axes(x) -> Tuple
 
 Returns a tuple of each axis corresponding to a spatial dimensions.
 """
-spatial_axes(img) = axes(img)
-spatial_axes(img::AbstractMappedArray) = indices_spatial(parent(img))
-function spatial_axes(img::AbstractMultiMappedArray)
-    ps = traititer(spatial_axes, parent(img)...)
-    checksame(ps)
+#l@inline spatial_axes(x) = map(i -> axes(x, i), spatialdims(x))
+@inline spatial_axes(x) = _filter_axes(named_axes(x), spatial_order(x))
+
+@inline function _filter_axes(naxs::NamedTuple, d::Tuple{Vararg{Any,N}}) where {N}
+    return ntuple(i -> getfield(naxs, getfield(d, i)), Val(N))
 end
-@inline spatial_axes(img::SubArray) =
-    _subarray_filter(spatial_axes(parent(img)), img.indices...)
-@inline spatial_axes(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(spatial_axes(parent(img)), perm)
 
 """
     spatial_size(x) -> Tuple{Vararg{Int}}
 
 Return a tuple listing the sizes of the spatial dimensions of the image.
 """
-spatial_size(img) = size(img)
+@inline spatial_size(x) =  map(i -> size(x, i), spatialdims(x))
 spatial_size(img::AbstractMappedArray) = size_spatial(parent(img))
 function spatial_size(img::AbstractMultiMappedArray)
     ps = traititer(spatial_size, parent(img)...)
     checksame(ps)
 end
-spatial_size(img::OffsetArray) = size_spatial(parent(img))
+# TODO remove spatial_size(img::OffsetArray) = size_spatial(parent(img))
 @inline spatial_size(img::SubArray) =
     _subarray_filter(spatial_size(parent(img)), img.indices...)
-@inline spatial_size(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm}) where {T,N,perm} =
-    _getindex_tuple(spatial_size(parent(img)), perm)
+@inline function spatial_size(img::Base.PermutedDimsArrays.PermutedDimsArray{T,N,perm,iperm}) where {T,N,perm,iperm}
+    return _getindex_tuple(spatial_size(parent(img)), iperm)
+end
 
 """
     spatial_indices(x)
@@ -262,7 +271,7 @@ _subarray_filter(x::Tuple{}) = ()
 _subarray_offset(off, x::Tuple{}) = ()
 
 @inline _getindex_tuple(t::Tuple, inds::Tuple) =
-    (t[inds[1]], _getindex_tuple(t, tail(inds))...)
+    (t[first(inds)], _getindex_tuple(t, tail(inds))...)
 _getindex_tuple(t::Tuple, ::Tuple{}) = ()
 
 @inline traititer(f, A, rest...) = (f(A), traititer(f, rest...)...)
